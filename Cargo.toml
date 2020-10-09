@@ -1,5 +1,5 @@
 [package]
-name = "matrix_judge"
+name = "rayjudge"
 version = "0.1.0"
 authors = ["hez2010 <hez2010@outlook.com>", "xfoxfu <i@xfox.me>"]
 edition = "2018"
