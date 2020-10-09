@@ -1,7 +1,7 @@
 [package]
 name = "matrix_judge"
 version = "0.1.0"
-authors = ["Steven He <hez2010@outlook.com>"]
+authors = ["hez2010 <hez2010@outlook.com>", "xfoxfu <i@xfox.me>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
