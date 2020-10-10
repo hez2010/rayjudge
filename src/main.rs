@@ -1,8 +1,9 @@
 mod schema;
+mod listener;
 use schema::{JudgeConfig,Program};
 
 fn main() {
-    let x: JudgeConfig = JudgeConfig {
+    let x = JudgeConfig {
         version: "v5".to_string(),
         r#type: "programming".to_string(),
         stages: Vec::new(),
