@@ -1,7 +1,7 @@
-mod schema;
 mod queue;
-use schema::{JudgeConfig,Program};
-use queue::Queue;
+mod schema;
+use queue::{Queue, QueuePublisher, QueueSubscriber};
+use schema::{JudgeConfig, Program};
 
 #[async_std::main]
 async fn main() {
@@ -22,8 +22,18 @@ async fn main() {
         custom_comparator: None,
         testcases: Vec::new(),
     };
-    let mq = Queue::new("amqp://localhost:5672".to_string(), "test".to_string(), "test".to_string(), "".to_string());
-    println!("conn");
+    let mut mq = Queue::new(
+        "amqp://localhost:5672".to_string(),
+        "mytest".to_string(),
+        "mytest".to_string(),
+        "".to_string(),
+    );
     mq.connect().await.unwrap();
+    mq.declare().await.unwrap();
+    // mq2.subscribe( |d|{async {()}}).await.unwrap();
+    mq.subscribe(|d| async move { println!("{:?}", d) })
+        .await
+        .unwrap();
+    mq.publish("test").await.unwrap();
     println!("{}", x);
 }
