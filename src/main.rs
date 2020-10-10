@@ -1,8 +1,12 @@
 mod schema;
-mod listener;
+mod queue;
 use schema::{JudgeConfig,Program};
+use queue::Queue;
 
-fn main() {
+#[async_std::main]
+async fn main() {
+    env_logger::init();
+
     let x = JudgeConfig {
         version: "v5".to_string(),
         r#type: "programming".to_string(),
@@ -18,6 +22,8 @@ fn main() {
         custom_comparator: None,
         testcases: Vec::new(),
     };
-
+    let mq = Queue::new("amqp://localhost:5672".to_string(), "test".to_string(), "test".to_string(), "".to_string());
+    println!("conn");
+    mq.connect().await.unwrap();
     println!("{}", x);
 }

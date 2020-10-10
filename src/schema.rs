@@ -1,5 +1,5 @@
-use std::fmt::Display;
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 
 #[derive(Serialize, Deserialize)]
 pub struct TestcaseEntry {
@@ -78,9 +78,9 @@ pub struct JudgeConfig {
 impl Display for JudgeConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let json = serde_json::to_string_pretty(self);
-        return match json {
+        match json {
             Ok(s) => f.write_str(s.as_str()),
-            Err(_) => Err(std::fmt::Error {})
-        };
+            Err(_) => Err(std::fmt::Error {}),
+        }
     }
 }
