@@ -1,5 +1,7 @@
 mod queue;
 mod schema;
+use std::str;
+use lapin::{message::Delivery, options::BasicAckOptions, Channel, Error};
 use queue::{Queue, QueuePublisher, QueueSubscriber};
 use schema::{JudgeConfig, Program};
 
@@ -7,7 +9,7 @@ use schema::{JudgeConfig, Program};
 async fn main() {
     env_logger::init();
 
-    let x = JudgeConfig {
+    let config = JudgeConfig {
         version: "v5".to_string(),
         r#type: "programming".to_string(),
         stages: Vec::new(),
@@ -31,9 +33,17 @@ async fn main() {
     mq.connect().await.unwrap();
     mq.declare().await.unwrap();
     // mq2.subscribe( |d|{async {()}}).await.unwrap();
-    mq.subscribe(|d| async move { println!("{:?}", d) })
-        .await
-        .unwrap();
-    mq.publish("test").await.unwrap();
-    println!("{}", x);
+
+    mq.subscribe(|d: Result<Option<(Channel, Delivery)>, Error>| async move {
+        let (channel, delivery) = d.unwrap().expect("error in consumer");
+        println!("{}", str::from_utf8(&delivery.data).unwrap());
+        channel
+            .basic_ack(delivery.delivery_tag, BasicAckOptions::default())
+            .await
+            .expect("ack");
+    })
+    .await
+    .unwrap();
+    let json = serde_json::to_string_pretty(&config).unwrap();
+    mq.publish(json.as_str()).await.unwrap()
 }
