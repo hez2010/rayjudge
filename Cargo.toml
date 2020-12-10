@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 async-amqp = "0.1.6"
-async-std = {version = "1.6.5", features = ["attributes"]}
+async-std = {version = "1.8.0", features = ["attributes"]}
 lapin = "1.4.1"
 serde = {version = "1.0", features=["derive"]}
 serde_json = "1.0"
