@@ -1,9 +1,18 @@
 mod queue;
 mod schema;
-use std::str;
+
+use std::{time::Duration, str};
 use lapin::{message::Delivery, options::BasicAckOptions, Channel, Error};
 use queue::{Queue, QueuePublisher, QueueSubscriber};
 use schema::{JudgeConfig, Program};
+
+struct JudgeResult {
+    status: String
+}
+
+async fn judge_submission(config: &JudgeConfig) -> Result<JudgeResult, &str> {
+    Err(&config.r#type)
+}
 
 #[async_std::main]
 async fn main() {
@@ -32,7 +41,6 @@ async fn main() {
     );
     mq.connect().await.unwrap();
     mq.declare().await.unwrap();
-    // mq2.subscribe( |d|{async {()}}).await.unwrap();
 
     mq.subscribe(|d: Result<Option<(Channel, Delivery)>, Error>| async move {
         let (channel, delivery) = d.unwrap().expect("error in consumer");
@@ -45,5 +53,13 @@ async fn main() {
     .await
     .unwrap();
     let json = serde_json::to_string_pretty(&config).unwrap();
-    mq.publish(json.as_str()).await.unwrap()
+    mq.publish(json.as_str()).await.unwrap();
+    async_std::task::block_on(async {
+        let result = judge_submission(&config).await;
+        match result {
+            Ok(r) => println!("{}", &r.status),
+            Err(msg) => println!("Error with {}", msg)
+        }
+    });
+    async_std::task::sleep(Duration::from_secs(1)).await
 }
