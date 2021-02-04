@@ -75,7 +75,22 @@ pub struct JudgeConfig {
     pub testcases: Vec<Testcase>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct JudgeResult {
+    pub status: String,
+}
+
 impl Display for JudgeConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let json = serde_json::to_string_pretty(self);
+        match json {
+            Ok(s) => f.write_str(s.as_str()),
+            Err(_) => Err(std::fmt::Error {}),
+        }
+    }
+}
+
+impl Display for JudgeResult {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let json = serde_json::to_string_pretty(self);
         match json {

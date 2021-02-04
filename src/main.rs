@@ -1,22 +1,79 @@
 mod queue;
 mod schema;
+mod worker;
 
-use std::{time::Duration, str};
-use lapin::{message::Delivery, options::BasicAckOptions, Channel, Error};
+use concurrent_queue::ConcurrentQueue;
+use lapin::{types::LongLongUInt, Channel};
+use once_cell::sync::OnceCell;
 use queue::{Queue, QueuePublisher, QueueSubscriber};
-use schema::{JudgeConfig, Program};
+use schema::{JudgeConfig, JudgeResult, Program};
+use std::{convert::TryInto, thread};
+use std_semaphore::Semaphore;
+use worker::Worker;
 
-struct JudgeResult {
-    status: String
+#[macro_use]
+extern crate lazy_static;
+
+lazy_static! {
+    static ref WORK_QUEUE: OnceCell<ConcurrentQueue<(
+        /* channel */ Channel,
+        /* delivery tag */ LongLongUInt,
+        /* judge config */ JudgeConfig,
+    )>> = OnceCell::new();
+
+    static ref WORKER_SEMAPHORE: OnceCell<Semaphore> = OnceCell::new();
 }
 
-async fn judge_submission(config: &JudgeConfig) -> Result<JudgeResult, &str> {
-    Err(&config.r#type)
-}
+const WORKER_COUNT: i32 = 4;
 
 #[async_std::main]
 async fn main() {
     env_logger::init();
+
+    let worker_queue: ConcurrentQueue<(
+        /* channel */ Channel,
+        /* delivery tag */ LongLongUInt,
+        /* judge config */ JudgeConfig,
+    )> = ConcurrentQueue::unbounded();
+
+    if let Err(_) = WORK_QUEUE.set(worker_queue) {
+        panic!("failed to set worker queue for once cell.");
+    }
+
+    let count: isize = WORKER_COUNT.try_into().unwrap();
+    let worker_semaphore = Semaphore::new(count);
+
+    if let Err(_) = WORKER_SEMAPHORE.set(worker_semaphore) {
+        panic!("failed to set worker semaphore for once cell.");
+    }
+
+    println!("initing message queue.");
+
+    let mut mq = Queue::new(
+        "amqp://localhost:5672".to_string(),
+        "mytest".to_string(),
+        "mytest".to_string(),
+        "".to_string(),
+    );
+
+    mq.connect().await.unwrap();
+    mq.declare().await.unwrap();
+
+    println!("starting judge workers.");
+
+    let mut workers = Vec::new();
+
+    for i in 0..WORKER_COUNT {
+        WORKER_SEMAPHORE.get().unwrap().acquire();
+        let worker = Worker::new(i, &WORK_QUEUE, &WORKER_SEMAPHORE);
+        mq.subscribe(worker).await.unwrap();
+        workers.push((
+            i,
+            thread::spawn(move || {
+                async_std::task::block_on(worker.worker_thread());
+            }),
+        ));
+    }
 
     let config = JudgeConfig {
         version: "v5".to_string(),
@@ -33,33 +90,16 @@ async fn main() {
         custom_comparator: None,
         testcases: Vec::new(),
     };
-    let mut mq = Queue::new(
-        "amqp://localhost:5672".to_string(),
-        "mytest".to_string(),
-        "mytest".to_string(),
-        "".to_string(),
-    );
-    mq.connect().await.unwrap();
-    mq.declare().await.unwrap();
 
-    mq.subscribe(|d: Result<Option<(Channel, Delivery)>, Error>| async move {
-        let (channel, delivery) = d.unwrap().expect("error in consumer");
-        println!("{}", str::from_utf8(&delivery.data).unwrap());
-        channel
-            .basic_ack(delivery.delivery_tag, BasicAckOptions::default())
-            .await
-            .expect("ack");
-    })
-    .await
-    .unwrap();
     let json = serde_json::to_string_pretty(&config).unwrap();
     mq.publish(json.as_str()).await.unwrap();
-    async_std::task::block_on(async {
-        let result = judge_submission(&config).await;
-        match result {
-            Ok(r) => println!("{}", &r.status),
-            Err(msg) => println!("Error with {}", msg)
+
+    for (id, handle) in workers {
+        match handle.join() {
+            Ok(_) => (),
+            Err(_) => {
+                println!("an error occurred in worker {}.", id);
+            }
         }
-    });
-    async_std::task::sleep(Duration::from_secs(1)).await
+    }
 }
