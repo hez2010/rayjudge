@@ -38,14 +38,14 @@ struct Opts {
     #[clap(short, long, default_value = "amqp://localhost:5672")]
     url: String,
     /// The queue name of message queue
-    #[clap(short, long, default_value = "Judge")]
+    #[clap(short, long, default_value = "rayjudge")]
     queue: String,
     /// The exchange name of message queue
-    #[clap(short, long, default_value = "Judge")]
+    #[clap(short, long, default_value = "rayjudge")]
     exchange: String,
     /// The routing key of message queue
-    #[clap(short, long, default_value = "")]
-    routing_key: String,
+    #[clap(short, long)]
+    routing_key: Option<String>,
 }
 
 const WORKER_COUNT: i32 = 4;
@@ -78,7 +78,10 @@ async fn main() {
         opts.url,
         opts.queue,
         opts.exchange,
-        opts.routing_key,
+        match opts.routing_key {
+            Some(key) => key,
+            None => "".to_string(),
+        },
     );
 
     mq.connect().await.unwrap();
