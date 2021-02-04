@@ -63,8 +63,11 @@ async fn main() {
 
     let mut workers = Vec::new();
 
-    for i in 0..WORKER_COUNT {
+    for _ in 0..WORKER_COUNT {
         WORKER_SEMAPHORE.get().unwrap().acquire();
+    }
+
+    for i in 0..WORKER_COUNT {
         let worker = Worker::new(i, &WORK_QUEUE, &WORKER_SEMAPHORE);
         mq.subscribe(worker).await.unwrap();
         workers.push((
