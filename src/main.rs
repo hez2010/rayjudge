@@ -2,6 +2,7 @@ mod queue;
 mod schema;
 mod worker;
 
+use clap::Clap;
 use concurrent_queue::ConcurrentQueue;
 use lapin::{types::LongLongUInt, Channel};
 use once_cell::sync::OnceCell;
@@ -24,10 +25,34 @@ lazy_static! {
     static ref WORKER_SEMAPHORE: OnceCell<Semaphore> = OnceCell::new();
 }
 
+#[derive(Clap)]
+#[clap(
+    version = "1.0",
+    author = "hez2010 <hez2010@outlook.com>, xfoxfu <i@xfox.me>, gw98 <i@yvettegwen.com>"
+)]
+struct Opts {
+    /// The number of workers
+    #[clap(short, long, default_value = "4")]
+    worker: i32,
+    /// The url of message queue
+    #[clap(short, long, default_value = "amqp://localhost:5672")]
+    url: String,
+    /// The queue name of message queue
+    #[clap(short, long, default_value = "Judge")]
+    queue: String,
+    /// The exchange name of message queue
+    #[clap(short, long, default_value = "Judge")]
+    exchange: String,
+    /// The routing key of message queue
+    #[clap(short, long, default_value = "")]
+    routing_key: String,
+}
+
 const WORKER_COUNT: i32 = 4;
 
 #[async_std::main]
 async fn main() {
+    let opts: Opts = Opts::parse();
     env_logger::init();
 
     let worker_queue: ConcurrentQueue<(
@@ -40,7 +65,7 @@ async fn main() {
         panic!("failed to set worker queue for once cell.");
     }
 
-    let count: isize = WORKER_COUNT.try_into().unwrap();
+    let count: isize = opts.worker.try_into().unwrap();
     let worker_semaphore = Semaphore::new(count);
 
     if let Err(_) = WORKER_SEMAPHORE.set(worker_semaphore) {
@@ -50,10 +75,10 @@ async fn main() {
     println!("initing message queue.");
 
     let mut mq = Queue::new(
-        "amqp://localhost:5672".to_string(),
-        "mytest".to_string(),
-        "mytest".to_string(),
-        "".to_string(),
+        opts.url,
+        opts.queue,
+        opts.exchange,
+        opts.routing_key,
     );
 
     mq.connect().await.unwrap();
