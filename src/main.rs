@@ -9,9 +9,9 @@ use log::{error, info};
 use once_cell::sync::OnceCell;
 use queue::{Queue, QueuePublisher, QueueSubscriber};
 use schema::{JudgeConfig, JudgeResult, Program};
-use worker::{windows_worker::WindowsWorker, worker::Worker};
 use std::{convert::TryInto, thread};
 use std_semaphore::Semaphore;
+use worker::{windows_worker::WindowsWorker, worker::Worker};
 
 #[macro_use]
 extern crate lazy_static;
