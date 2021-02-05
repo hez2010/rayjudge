@@ -1,10 +1,22 @@
+use super::worker::PlatformWorker;
 use crate::{schema::JudgeConfig, JudgeResult};
+use async_trait::async_trait;
+use log::info;
 
-use super::Worker;
+#[derive(Clone, Copy)]
+pub struct WindowsWorker {}
 
-#[cfg(target_os = "windows")]
-pub async fn judge(worker: &Worker, config: &JudgeConfig) -> Result<JudgeResult, String> {
-    println!("{}", config);
+impl WindowsWorker {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
 
-    Err(format!("error from worker {}: not implemented.", worker.id).to_string())
+#[async_trait]
+impl PlatformWorker for WindowsWorker {
+    async fn judge(&self, config: &JudgeConfig) -> Result<JudgeResult, String> {
+        info!("{}", config);
+
+        Err("not implemented.".to_string())
+    }
 }

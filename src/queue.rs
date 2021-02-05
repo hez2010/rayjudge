@@ -48,12 +48,13 @@ impl QueuePublisher for Queue {
     }
 
     async fn declare(&self) -> Result<()> {
-        let channel = self.connection.get().unwrap().create_channel().await?;
-        self.channel.set(channel).unwrap();
-
         self.channel
-            .get()
-            .unwrap()
+            .set(self.connection.get().unwrap().create_channel().await?)
+            .unwrap();
+
+        let channel = self.channel.get().unwrap();
+
+        channel
             .queue_declare(
                 &self.queue,
                 QueueDeclareOptions::default(),
@@ -61,9 +62,7 @@ impl QueuePublisher for Queue {
             )
             .await?;
 
-        self.channel
-            .get()
-            .unwrap()
+        channel
             .exchange_declare(
                 &self.exchange,
                 ExchangeKind::Direct,
@@ -72,9 +71,7 @@ impl QueuePublisher for Queue {
             )
             .await?;
 
-        self.channel
-            .get()
-            .unwrap()
+        channel
             .queue_bind(
                 &self.queue,
                 &self.exchange,

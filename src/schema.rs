@@ -66,6 +66,7 @@ pub struct Stage {
 
 #[derive(Serialize, Deserialize)]
 pub struct JudgeConfig {
+    pub id: i32,
     pub version: String,
     pub r#type: String,
     pub stages: Vec<Stage>,
@@ -77,6 +78,7 @@ pub struct JudgeConfig {
 
 #[derive(Serialize, Deserialize)]
 pub struct JudgeResult {
+    pub id: i32,
     pub status: String,
 }
 

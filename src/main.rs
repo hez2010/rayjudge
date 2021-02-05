@@ -5,12 +5,13 @@ mod worker;
 use clap::Clap;
 use concurrent_queue::ConcurrentQueue;
 use lapin::{types::LongLongUInt, Channel};
+use log::{error, info};
 use once_cell::sync::OnceCell;
 use queue::{Queue, QueuePublisher, QueueSubscriber};
 use schema::{JudgeConfig, JudgeResult, Program};
+use worker::{windows_worker::WindowsWorker, worker::Worker};
 use std::{convert::TryInto, thread};
 use std_semaphore::Semaphore;
-use worker::Worker;
 
 #[macro_use]
 extern crate lazy_static;
@@ -50,10 +51,11 @@ struct Opts {
 
 const WORKER_COUNT: i32 = 4;
 
-#[async_std::main]
-async fn main() {
-    let opts: Opts = Opts::parse();
+fn init() -> Opts {
+    info!("initializing rayjudge.");
     env_logger::init();
+
+    let opts: Opts = Opts::parse();
 
     let worker_queue: ConcurrentQueue<(
         /* channel */ Channel,
@@ -72,7 +74,14 @@ async fn main() {
         panic!("failed to set worker semaphore for once cell.");
     }
 
-    println!("initing message queue.");
+    opts
+}
+
+#[async_std::main]
+async fn main() {
+    let opts = init();
+
+    info!("connecting to message queue.");
 
     let mut mq = Queue::new(
         opts.url,
@@ -87,7 +96,7 @@ async fn main() {
     mq.connect().await.unwrap();
     mq.declare().await.unwrap();
 
-    println!("starting judge workers.");
+    info!("starting judge workers.");
 
     let mut workers = Vec::new();
 
@@ -96,7 +105,11 @@ async fn main() {
     }
 
     for i in 0..WORKER_COUNT {
-        let worker = Worker::new(i, &WORK_QUEUE, &WORKER_SEMAPHORE);
+        #[cfg(target_os = "windows")]
+        let platform_worker = WindowsWorker::new();
+        #[cfg(target_os = "linux")]
+        let platform_worker = LinuxWorker::new();
+        let worker = Worker::new(i, &WORK_QUEUE, &WORKER_SEMAPHORE, platform_worker);
         mq.subscribe(worker).await.unwrap();
         workers.push((
             i,
@@ -107,6 +120,7 @@ async fn main() {
     }
 
     let config = JudgeConfig {
+        id: 1,
         version: "v5".to_string(),
         r#type: "programming".to_string(),
         stages: Vec::new(),
@@ -129,7 +143,7 @@ async fn main() {
         match handle.join() {
             Ok(_) => (),
             Err(_) => {
-                println!("an error occurred in worker {}.", id);
+                error!("an error occurred in worker {}.", id);
             }
         }
     }

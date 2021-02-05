@@ -1,8 +1,22 @@
+use super::worker::PlatformWorker;
 use crate::{schema::JudgeConfig, JudgeResult};
+use async_trait::async_trait;
+use log::info;
 
-#[cfg(target_os = "linux")]
-pub async fn judge(worker: &Worker, config: &JudgeConfig) -> Result<JudgeResult, String> {
-    println!("{}", config);
+#[derive(Clone, Copy)]
+pub struct LinuxWorker {}
 
-    Err(format!("error from worker {}: not implemented.", worker.id).to_string())
+impl LinuxWorker {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+#[async_trait]
+impl PlatformWorker for LinuxWorker {
+    async fn judge(&self, config: &JudgeConfig) -> Result<JudgeResult, String> {
+        info!("{}", config);
+
+        Err("not implemented.".to_string())
+    }
 }
