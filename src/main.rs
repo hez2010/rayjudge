@@ -11,7 +11,10 @@ use queue::{Queue, QueuePublisher, QueueSubscriber};
 use schema::{JudgeConfig, JudgeResult, Program};
 use std::{convert::TryInto, thread};
 use std_semaphore::Semaphore;
+#[cfg(target_os = "windows")]
 use worker::{windows_worker::WindowsWorker, worker::Worker};
+#[cfg(target_os = "linux")]
+use worker::{linux_worker::LinuxWorker, worker::Worker};
 
 #[macro_use]
 extern crate lazy_static;
