@@ -967,6 +967,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "protobuf"
+version = "2.22.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "73f72884896d22e0da0e5b266cb9a780b791f6c3b2f5beab6368d6cd4f0dbb86"
+
+[[package]]
 name = "quote"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1035,6 +1041,7 @@ dependencies = [
  "lazy_static",
  "log",
  "once_cell",
+ "protobuf",
  "serde",
  "serde_json",
  "std-semaphore",
